@@ -26,7 +26,7 @@ export default function DashboardLayout({
           </a>
 
           <a
-            href="#"
+            href="/dashboard/tickets"
             className="block hover:text-red-500 transition"
           >
             Tickets
