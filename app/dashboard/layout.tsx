@@ -7,7 +7,7 @@ export default function DashboardLayout({
     <div className="min-h-screen flex bg-black text-white">
       <aside className="w-64 bg-zinc-950 border-r border-zinc-800 p-6">
         <h2 className="text-2xl font-bold text-red-500">
-          MATCHFLOW
+          FLUJO DE PARTIDO
         </h2>
 
         <nav className="mt-8 space-y-4">
@@ -15,7 +15,7 @@ export default function DashboardLayout({
             href="/dashboard"
             className="block hover:text-red-500 transition"
           >
-            Dashboard
+            Panel
           </a>
 
           <a
@@ -29,11 +29,11 @@ export default function DashboardLayout({
             href="/dashboard/tickets"
             className="block hover:text-red-500 transition"
           >
-            Tickets
+            Entradas
           </a>
 
           <a
-            href="#"
+            href="/dashboard/ventas"
             className="block hover:text-red-500 transition"
           >
             Ventas
