@@ -11,50 +11,54 @@ interface Ticket {
   cantidad: number;
 }
 
+interface Aficionado {
+  id: number;
+  nombre: string;
+  cedula: string;
+}
+
 interface Venta {
   id: number;
   ticket_id: number;
+  aficionado_id?: number;
   comprador: string;
   cantidad: number;
+  qr_code?: string;
+  usado?: boolean;
 }
 
 export default function VentasPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [aficionados, setAficionados] = useState<Aficionado[]>([]);
   const [ventas, setVentas] = useState<Venta[]>([]);
 
   const [ticketId, setTicketId] = useState("");
-  const [comprador, setComprador] = useState("");
+  const [aficionadoId, setAficionadoId] = useState("");
   const [cantidad, setCantidad] = useState("");
 
   async function cargarDatos() {
-    const {
-      data: ticketsData,
-      error: ticketsError,
-    } = await supabase
+    const { data: ticketsData } = await supabase
       .from("tickets")
       .select("*")
       .order("id", { ascending: false });
 
-    console.log("TICKETS:", ticketsData);
-    console.log("ERROR TICKETS:", ticketsError);
+    const { data: aficionadosData } = await supabase
+      .from("aficionados")
+      .select("*")
+      .order("nombre");
 
-    const {
-      data: ventasData,
-      error: ventasError,
-    } = await supabase
+    const { data: ventasData } = await supabase
       .from("ventas")
       .select("*")
       .order("id", { ascending: false });
 
-    console.log("VENTAS:", ventasData);
-    console.log("ERROR VENTAS:", ventasError);
-
     setTickets(ticketsData || []);
+    setAficionados(aficionadosData || []);
     setVentas(ventasData || []);
   }
 
   async function registrarVenta() {
-    if (!ticketId || !comprador || !cantidad) {
+    if (!ticketId || !aficionadoId || !cantidad) {
       alert("Completa todos los campos");
       return;
     }
@@ -68,18 +72,36 @@ export default function VentasPage() {
       return;
     }
 
-    if (Number(cantidad) > ticket.cantidad) {
-      alert("No hay suficientes entradas disponibles");
+    const aficionado = aficionados.find(
+      (a) => a.id === Number(aficionadoId)
+    );
+
+    if (!aficionado) {
+      alert("Aficionado no encontrado");
       return;
     }
+
+    if (Number(cantidad) > ticket.cantidad) {
+      alert("No hay stock suficiente");
+      return;
+    }
+
+    const codigoQR =
+      "QR-" +
+      Date.now() +
+      "-" +
+      Math.floor(Math.random() * 100000);
 
     const { error: ventaError } = await supabase
       .from("ventas")
       .insert([
         {
-          ticket_id: Number(ticketId),
-          comprador,
+          ticket_id: ticket.id,
+          aficionado_id: aficionado.id,
+          comprador: aficionado.nombre,
           cantidad: Number(cantidad),
+          qr_code: codigoQR,
+          usado: false,
         },
       ]);
 
@@ -104,10 +126,12 @@ export default function VentasPage() {
     }
 
     setTicketId("");
-    setComprador("");
+    setAficionadoId("");
     setCantidad("");
 
-    cargarDatos();
+    await cargarDatos();
+
+    alert("Venta registrada correctamente");
   }
 
   function obtenerTicket(id: number) {
@@ -132,6 +156,7 @@ export default function VentasPage() {
         </h2>
 
         <div className="flex flex-col gap-4">
+
           <select
             value={ticketId}
             onChange={(e) =>
@@ -140,7 +165,7 @@ export default function VentasPage() {
             className="p-3 rounded bg-zinc-800"
           >
             <option value="">
-              Selecciona una entrada
+              Selecciona un ticket
             </option>
 
             {tickets.map((ticket) => (
@@ -153,15 +178,26 @@ export default function VentasPage() {
             ))}
           </select>
 
-          <input
-            type="text"
-            placeholder="Nombre del comprador"
-            value={comprador}
+          <select
+            value={aficionadoId}
             onChange={(e) =>
-              setComprador(e.target.value)
+              setAficionadoId(e.target.value)
             }
             className="p-3 rounded bg-zinc-800"
-          />
+          >
+            <option value="">
+              Selecciona un aficionado
+            </option>
+
+            {aficionados.map((aficionado) => (
+              <option
+                key={aficionado.id}
+                value={aficionado.id}
+              >
+                {aficionado.nombre} - {aficionado.cedula}
+              </option>
+            ))}
+          </select>
 
           <input
             type="number"
@@ -179,6 +215,7 @@ export default function VentasPage() {
           >
             Registrar Venta
           </button>
+
         </div>
       </div>
 
@@ -192,8 +229,9 @@ export default function VentasPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {ventas.map((venta) => {
-              const ticket =
-                obtenerTicket(venta.ticket_id);
+              const ticket = obtenerTicket(
+                venta.ticket_id
+              );
 
               return (
                 <div
@@ -205,11 +243,24 @@ export default function VentasPage() {
                   </h3>
 
                   <p>
-                    Entrada: {ticket?.nombre || "No encontrada"}
+                    Ticket:{" "}
+                    {ticket?.nombre ||
+                      "No encontrado"}
                   </p>
 
                   <p>
                     Cantidad: {venta.cantidad}
+                  </p>
+
+                  <p>
+                    QR: {venta.qr_code}
+                  </p>
+
+                  <p>
+                    Estado:{" "}
+                    {venta.usado
+                      ? "Usado"
+                      : "Disponible"}
                   </p>
                 </div>
               );
