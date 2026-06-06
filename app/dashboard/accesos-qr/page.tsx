@@ -12,21 +12,41 @@ interface Venta {
   qr_code: string;
   usado: boolean;
   fecha_ingreso: string | null;
+  aficionado_id: number | null;
+}
+
+interface Aficionado {
+  id: number;
+  nombre: string;
+  cedula: string;
+  email: string;
+  telefono: string;
 }
 
 export default function AccesosQRPage() {
   const [codigoQR, setCodigoQR] = useState("");
   const [venta, setVenta] = useState<Venta | null>(null);
-  const [ticketNombre, setTicketNombre] = useState("");
-  const [mensaje, setMensaje] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [aficionado, setAficionado] =
+    useState<Aficionado | null>(null);
 
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [ticketNombre, setTicketNombre] =
+    useState("");
+
+  const [mensaje, setMensaje] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const scannerRef =
+    useRef<Html5Qrcode | null>(null);
 
   async function buscarQR(codigo: string) {
     setLoading(true);
+
     setMensaje("");
     setVenta(null);
+    setAficionado(null);
     setTicketNombre("");
 
     const { data, error } = await supabase
@@ -41,6 +61,8 @@ export default function AccesosQRPage() {
       return;
     }
 
+    setVenta(data);
+
     const { data: ticket } = await supabase
       .from("tickets")
       .select("nombre")
@@ -51,7 +73,19 @@ export default function AccesosQRPage() {
       setTicketNombre(ticket.nombre);
     }
 
-    setVenta(data);
+    if (data.aficionado_id) {
+      const { data: aficionadoData } =
+        await supabase
+          .from("aficionados")
+          .select("*")
+          .eq("id", data.aficionado_id)
+          .single();
+
+      if (aficionadoData) {
+        setAficionado(aficionadoData);
+      }
+    }
+
     setLoading(false);
   }
 
@@ -59,11 +93,14 @@ export default function AccesosQRPage() {
     if (!venta) return;
 
     if (venta.usado) {
-      setMensaje("🚫 Este QR ya fue utilizado");
+      setMensaje(
+        "🚫 Este QR ya fue utilizado"
+      );
       return;
     }
 
-    const fechaIngreso = new Date().toISOString();
+    const fechaIngreso =
+      new Date().toISOString();
 
     const { error } = await supabase
       .from("ventas")
@@ -74,7 +111,9 @@ export default function AccesosQRPage() {
       .eq("id", venta.id);
 
     if (error) {
-      setMensaje(`❌ ${error.message}`);
+      setMensaje(
+        `❌ ${error.message}`
+      );
       return;
     }
 
@@ -84,11 +123,15 @@ export default function AccesosQRPage() {
       fecha_ingreso: fechaIngreso,
     });
 
-    setMensaje("✅ Acceso permitido");
+    setMensaje(
+      "✅ Acceso permitido"
+    );
   }
 
   useEffect(() => {
-    const scanner = new Html5Qrcode("reader");
+    const scanner =
+      new Html5Qrcode("reader");
+
     scannerRef.current = scanner;
 
     scanner
@@ -100,7 +143,10 @@ export default function AccesosQRPage() {
         },
         async (decodedText) => {
           setCodigoQR(decodedText);
-          await buscarQR(decodedText);
+
+          await buscarQR(
+            decodedText
+          );
         },
         () => {}
       )
@@ -109,10 +155,7 @@ export default function AccesosQRPage() {
       });
 
     return () => {
-      if (
-        scannerRef.current &&
-        scannerRef.current.isScanning
-      ) {
+      if (scannerRef.current) {
         scannerRef.current
           .stop()
           .catch(() => {});
@@ -140,60 +183,103 @@ export default function AccesosQRPage() {
           type="text"
           value={codigoQR}
           onChange={(e) =>
-            setCodigoQR(e.target.value)
+            setCodigoQR(
+              e.target.value
+            )
           }
           placeholder="Código QR"
           className="w-full p-3 rounded bg-zinc-800 mb-4"
         />
 
         <button
-          onClick={() => buscarQR(codigoQR)}
+          onClick={() =>
+            buscarQR(codigoQR)
+          }
           className="bg-blue-600 hover:bg-blue-700 p-3 rounded font-bold w-full"
         >
-          {loading ? "Buscando..." : "Buscar QR"}
+          {loading
+            ? "Buscando..."
+            : "Buscar QR"}
         </button>
 
         {venta && (
-          <div className="mt-6 bg-zinc-800 p-4 rounded-lg">
-            <h3 className="text-2xl font-bold mb-3">
-              {venta.comprador}
-            </h3>
+          <div className="mt-6 bg-zinc-800 p-6 rounded-lg">
 
-            <p>
-              <strong>Ticket:</strong>{" "}
-              {ticketNombre}
-            </p>
+            <h2 className="text-3xl font-bold text-green-400 mb-4">
+              Información del Acceso
+            </h2>
 
-            <p>
-              <strong>Cantidad:</strong>{" "}
-              {venta.cantidad}
-            </p>
+            <div className="space-y-2">
 
-            <p>
-              <strong>QR:</strong>{" "}
-              {venta.qr_code}
-            </p>
-
-            <p>
-              <strong>Estado:</strong>{" "}
-              {venta.usado
-                ? "🔴 Ya utilizado"
-                : "🟢 Disponible"}
-            </p>
-
-            {venta.fecha_ingreso && (
               <p>
-                <strong>Ingreso:</strong>{" "}
-                {new Date(
-                  venta.fecha_ingreso
-                ).toLocaleString()}
+                <strong>Ticket:</strong>{" "}
+                {ticketNombre}
               </p>
+
+              <p>
+                <strong>Cantidad:</strong>{" "}
+                {venta.cantidad}
+              </p>
+
+              <p>
+                <strong>QR:</strong>{" "}
+                {venta.qr_code}
+              </p>
+
+              <p>
+                <strong>Estado:</strong>{" "}
+                {venta.usado
+                  ? "🔴 Ya utilizado"
+                  : "🟢 Disponible"}
+              </p>
+
+              {venta.fecha_ingreso && (
+                <p>
+                  <strong>
+                    Fecha ingreso:
+                  </strong>{" "}
+                  {new Date(
+                    venta.fecha_ingreso
+                  ).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {aficionado && (
+              <div className="mt-6 border-t border-zinc-700 pt-6">
+
+                <h3 className="text-2xl font-bold text-red-400 mb-4">
+                  Datos del Aficionado
+                </h3>
+
+                <p>
+                  <strong>Nombre:</strong>{" "}
+                  {aficionado.nombre}
+                </p>
+
+                <p>
+                  <strong>Cédula:</strong>{" "}
+                  {aficionado.cedula}
+                </p>
+
+                <p>
+                  <strong>Correo:</strong>{" "}
+                  {aficionado.email}
+                </p>
+
+                <p>
+                  <strong>Teléfono:</strong>{" "}
+                  {aficionado.telefono}
+                </p>
+              </div>
             )}
 
             {!venta.usado && (
               <button
-                onClick={validarIngreso}
-                className="mt-4 bg-green-600 hover:bg-green-700 p-3 rounded font-bold w-full"
+                onClick={
+                  validarIngreso
+                }
+                className="mt-6 bg-green-600 hover:bg-green-700 p-3 rounded font-bold w-full"
               >
                 Permitir Acceso
               </button>
