@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import QRCode from "qrcode";
+import { generarTicketPDF } from "@/lib/pdf-ticket";
 
 interface Ticket {
   id: number;
@@ -9,6 +11,13 @@ interface Ticket {
   nombre: string;
   precio: number;
   cantidad: number;
+}
+
+interface Evento {
+  id: number;
+  partido: string;
+  fecha: string;
+  estadio: string;
 }
 
 interface Aficionado {
@@ -20,15 +29,16 @@ interface Aficionado {
 interface Venta {
   id: number;
   ticket_id: number;
-  aficionado_id?: number;
   comprador: string;
   cantidad: number;
-  qr_code?: string;
+  qr_code: string;
+  qr_image: string;
   usado?: boolean;
 }
 
 export default function VentasPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [eventos, setEventos] = useState<Evento[]>([]);
   const [aficionados, setAficionados] = useState<Aficionado[]>([]);
   const [ventas, setVentas] = useState<Venta[]>([]);
 
@@ -42,10 +52,13 @@ export default function VentasPage() {
       .select("*")
       .order("id", { ascending: false });
 
+    const { data: eventosData } = await supabase
+      .from("eventos")
+      .select("*");
+
     const { data: aficionadosData } = await supabase
       .from("aficionados")
-      .select("*")
-      .order("nombre");
+      .select("*");
 
     const { data: ventasData } = await supabase
       .from("ventas")
@@ -53,8 +66,21 @@ export default function VentasPage() {
       .order("id", { ascending: false });
 
     setTickets(ticketsData || []);
+    setEventos(eventosData || []);
     setAficionados(aficionadosData || []);
-    setVentas(ventasData || []);
+
+    if (ventasData) {
+      const ventasConQR: Venta[] = await Promise.all(
+        ventasData.map(async (venta) => ({
+          ...venta,
+          qr_image: await QRCode.toDataURL(
+            venta.qr_code
+          ),
+        }))
+      );
+
+      setVentas(ventasConQR);
+    }
   }
 
   async function registrarVenta() {
@@ -82,62 +108,73 @@ export default function VentasPage() {
     }
 
     if (Number(cantidad) > ticket.cantidad) {
-      alert("No hay stock suficiente");
+      alert("Stock insuficiente");
       return;
     }
 
-    const codigoQR =
+    const qr =
       "QR-" +
       Date.now() +
       "-" +
       Math.floor(Math.random() * 100000);
 
-    const { error: ventaError } = await supabase
+    const { error } = await supabase
       .from("ventas")
       .insert([
         {
           ticket_id: ticket.id,
-          aficionado_id: aficionado.id,
           comprador: aficionado.nombre,
           cantidad: Number(cantidad),
-          qr_code: codigoQR,
+          qr_code: qr,
           usado: false,
+          aficionado_id: aficionado.id,
         },
       ]);
 
-    if (ventaError) {
-      alert(ventaError.message);
+    if (error) {
+      alert(error.message);
       return;
     }
 
-    const nuevoStock =
-      ticket.cantidad - Number(cantidad);
-
-    const { error: stockError } = await supabase
+    await supabase
       .from("tickets")
       .update({
-        cantidad: nuevoStock,
+        cantidad:
+          ticket.cantidad - Number(cantidad),
       })
       .eq("id", ticket.id);
 
-    if (stockError) {
-      alert(stockError.message);
-      return;
-    }
+    alert("Venta registrada correctamente");
 
+    setCantidad("");
     setTicketId("");
     setAficionadoId("");
-    setCantidad("");
 
     await cargarDatos();
-
-    alert("Venta registrada correctamente");
   }
 
-  function obtenerTicket(id: number) {
-    return tickets.find(
-      (ticket) => ticket.id === id
+  function descargarPDF(venta: Venta) {
+    const ticket = tickets.find(
+      (t) => t.id === venta.ticket_id
     );
+
+    if (!ticket) return;
+
+    const evento = eventos.find(
+      (e) => e.id === ticket.evento_id
+    );
+
+    if (!evento) return;
+
+    generarTicketPDF({
+      comprador: venta.comprador,
+      partido: evento.partido,
+      fecha: evento.fecha,
+      estadio: evento.estadio,
+      zona: ticket.nombre,
+      qr: venta.qr_code,
+      qrImage: venta.qr_image,
+    });
   }
 
   useEffect(() => {
@@ -156,7 +193,6 @@ export default function VentasPage() {
         </h2>
 
         <div className="flex flex-col gap-4">
-
           <select
             value={ticketId}
             onChange={(e) =>
@@ -165,7 +201,7 @@ export default function VentasPage() {
             className="p-3 rounded bg-zinc-800"
           >
             <option value="">
-              Selecciona un ticket
+              Selecciona Ticket
             </option>
 
             {tickets.map((ticket) => (
@@ -173,7 +209,8 @@ export default function VentasPage() {
                 key={ticket.id}
                 value={ticket.id}
               >
-                {ticket.nombre} - Stock: {ticket.cantidad}
+                {ticket.nombre} - Stock:{" "}
+                {ticket.cantidad}
               </option>
             ))}
           </select>
@@ -186,7 +223,7 @@ export default function VentasPage() {
             className="p-3 rounded bg-zinc-800"
           >
             <option value="">
-              Selecciona un aficionado
+              Selecciona Aficionado
             </option>
 
             {aficionados.map((aficionado) => (
@@ -194,7 +231,7 @@ export default function VentasPage() {
                 key={aficionado.id}
                 value={aficionado.id}
               >
-                {aficionado.nombre} - {aficionado.cedula}
+                {aficionado.nombre}
               </option>
             ))}
           </select>
@@ -211,62 +248,70 @@ export default function VentasPage() {
 
           <button
             onClick={registrarVenta}
-            className="bg-red-600 hover:bg-red-700 p-3 rounded font-bold"
+            className="bg-red-600 p-3 rounded font-bold"
           >
             Registrar Venta
           </button>
-
         </div>
       </div>
 
       <div className="bg-zinc-900 p-6 rounded-xl">
-        <h2 className="text-2xl font-bold mb-4">
+        <h2 className="text-2xl font-bold mb-6">
           Ventas Registradas
         </h2>
 
-        {ventas.length === 0 ? (
-          <p>No hay ventas registradas.</p>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {ventas.map((venta) => {
-              const ticket = obtenerTicket(
-                venta.ticket_id
-              );
+        <div className="space-y-6">
+          {ventas.map((venta) => {
+            const ticket = tickets.find(
+              (t) => t.id === venta.ticket_id
+            );
 
-              return (
-                <div
-                  key={venta.id}
-                  className="bg-zinc-800 p-4 rounded-lg"
+            return (
+              <div
+                key={venta.id}
+                className="bg-zinc-800 p-5 rounded-xl"
+              >
+                <h3 className="text-xl font-bold">
+                  {venta.comprador}
+                </h3>
+
+                <p>
+                  Ticket: {ticket?.nombre}
+                </p>
+
+                <p>
+                  Cantidad: {venta.cantidad}
+                </p>
+
+                <p>
+                  Estado:
+                  {venta.usado
+                    ? " 🔴 Usado"
+                    : " 🟢 Disponible"}
+                </p>
+
+                <p>
+                  QR: {venta.qr_code}
+                </p>
+
+                <img
+                  src={venta.qr_image}
+                  alt="QR"
+                  className="w-40 mt-4 bg-white p-2 rounded"
+                />
+
+                <button
+                  onClick={() =>
+                    descargarPDF(venta)
+                  }
+                  className="mt-4 bg-green-600 px-4 py-2 rounded font-bold"
                 >
-                  <h3 className="text-xl font-bold">
-                    {venta.comprador}
-                  </h3>
-
-                  <p>
-                    Ticket:{" "}
-                    {ticket?.nombre ||
-                      "No encontrado"}
-                  </p>
-
-                  <p>
-                    Cantidad: {venta.cantidad}
-                  </p>
-
-                  <p>
-                    QR: {venta.qr_code}
-                  </p>
-
-                  <p>
-                    Estado:{" "}
-                    {venta.usado
-                      ? "Usado"
-                      : "Disponible"}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  Descargar Ticket PDF
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </main>
   );

@@ -4,133 +4,118 @@ import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 
-interface Venta {
-  id: number;
-  ticket_id: number;
-  comprador: string;
-  cantidad: number;
-  qr_code: string;
-  usado: boolean;
-  fecha_ingreso: string | null;
-  aficionado_id: number | null;
-}
-
-interface Aficionado {
-  id: number;
-  nombre: string;
-  cedula: string;
-  email: string;
-  telefono: string;
-}
-
 export default function AccesosQRPage() {
-  const [codigoQR, setCodigoQR] = useState("");
-  const [venta, setVenta] = useState<Venta | null>(null);
-  const [aficionado, setAficionado] =
-    useState<Aficionado | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  const [ticketNombre, setTicketNombre] =
-    useState("");
+  const [escaneando, setEscaneando] = useState(false);
 
-  const [mensaje, setMensaje] =
-    useState("");
+  const [estado, setEstado] = useState<
+    "esperando" | "autorizado" | "denegado"
+  >("esperando");
 
-  const [loading, setLoading] =
-    useState(false);
+  const [mensaje, setMensaje] = useState("");
 
-  const scannerRef =
-    useRef<Html5Qrcode | null>(null);
+  const [comprador, setComprador] = useState("");
+  const [ticket, setTicket] = useState("");
+  const [cantidad, setCantidad] = useState(0);
 
-  async function buscarQR(codigo: string) {
-    setLoading(true);
+  async function validarQR(qrCode: string) {
+    if (escaneando) return;
 
-    setMensaje("");
-    setVenta(null);
-    setAficionado(null);
-    setTicketNombre("");
+    setEscaneando(true);
 
-    const { data, error } = await supabase
+    const { data: venta, error } = await supabase
       .from("ventas")
       .select("*")
-      .eq("qr_code", codigo.trim())
+      .eq("qr_code", qrCode)
       .single();
 
-    if (error || !data) {
-      setMensaje("❌ QR no encontrado");
-      setLoading(false);
+    if (error || !venta) {
+      setEstado("denegado");
+      setMensaje("QR NO ENCONTRADO");
+
+      reproducirSonidoError();
+
+      setTimeout(() => {
+        limpiarPantalla();
+      }, 3000);
+
       return;
     }
-
-    setVenta(data);
-
-    const { data: ticket } = await supabase
-      .from("tickets")
-      .select("nombre")
-      .eq("id", data.ticket_id)
-      .single();
-
-    if (ticket) {
-      setTicketNombre(ticket.nombre);
-    }
-
-    if (data.aficionado_id) {
-      const { data: aficionadoData } =
-        await supabase
-          .from("aficionados")
-          .select("*")
-          .eq("id", data.aficionado_id)
-          .single();
-
-      if (aficionadoData) {
-        setAficionado(aficionadoData);
-      }
-    }
-
-    setLoading(false);
-  }
-
-  async function validarIngreso() {
-    if (!venta) return;
 
     if (venta.usado) {
-      setMensaje(
-        "🚫 Este QR ya fue utilizado"
-      );
+      setEstado("denegado");
+      setMensaje("TICKET YA UTILIZADO");
+
+      reproducirSonidoError();
+
+      setTimeout(() => {
+        limpiarPantalla();
+      }, 3000);
+
       return;
     }
 
-    const fechaIngreso =
-      new Date().toISOString();
+    const { data: ticketData } = await supabase
+      .from("tickets")
+      .select("nombre")
+      .eq("id", venta.ticket_id)
+      .single();
 
-    const { error } = await supabase
+    await supabase
       .from("ventas")
       .update({
         usado: true,
-        fecha_ingreso: fechaIngreso,
+        fecha_ingreso: new Date().toISOString(),
       })
       .eq("id", venta.id);
 
-    if (error) {
-      setMensaje(
-        `❌ ${error.message}`
-      );
-      return;
-    }
+    setComprador(venta.comprador);
 
-    setVenta({
-      ...venta,
-      usado: true,
-      fecha_ingreso: fechaIngreso,
-    });
-
-    setMensaje(
-      "✅ Acceso permitido"
+    setTicket(
+      ticketData?.nombre || "Zona no encontrada"
     );
+
+    setCantidad(venta.cantidad);
+
+    setEstado("autorizado");
+
+    setMensaje("ACCESO AUTORIZADO");
+
+    reproducirSonidoExito();
+
+    setTimeout(() => {
+      limpiarPantalla();
+    }, 3000);
+  }
+
+  function limpiarPantalla() {
+    setEstado("esperando");
+    setMensaje("");
+    setComprador("");
+    setTicket("");
+    setCantidad(0);
+    setEscaneando(false);
+  }
+
+  function reproducirSonidoExito() {
+    const audio = new Audio(
+      "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+    );
+
+    audio.play().catch(() => {});
+  }
+
+  function reproducirSonidoError() {
+    const audio = new Audio(
+      "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+    );
+
+    audio.play().catch(() => {});
   }
 
   useEffect(() => {
-    const scanner =
-      new Html5Qrcode("reader");
+    const scanner = new Html5Qrcode("reader");
 
     scannerRef.current = scanner;
 
@@ -142,156 +127,116 @@ export default function AccesosQRPage() {
           qrbox: 250,
         },
         async (decodedText) => {
-          setCodigoQR(decodedText);
-
-          await buscarQR(
-            decodedText
-          );
+          await validarQR(decodedText.trim());
         },
         () => {}
       )
-      .catch((err) => {
-        console.error(err);
-      });
+      .catch(console.error);
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .catch(() => {});
+        scannerRef.current.stop().catch(() => {});
       }
     };
   }, []);
 
   return (
-    <main className="p-8 text-white">
-      <h1 className="text-5xl font-bold text-red-500 mb-8">
-        Accesos QR
+    <main
+      className={`min-h-screen p-8 text-white transition-all duration-300 ${
+        estado === "autorizado"
+          ? "bg-green-900"
+          : estado === "denegado"
+          ? "bg-red-900"
+          : "bg-black"
+      }`}
+    >
+      <h1 className="text-5xl font-bold mb-8 text-center">
+        Control de Accesos QR
       </h1>
 
-      <div className="bg-zinc-900 p-6 rounded-xl">
-        <h2 className="text-2xl font-bold mb-4">
-          Escáner QR
-        </h2>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-zinc-900 rounded-xl p-6">
 
-        <div
-          id="reader"
-          className="w-full max-w-md mx-auto mb-6"
-        />
+          <h2 className="text-3xl font-bold mb-6 text-center">
+            Escanee el Ticket
+          </h2>
 
-        <input
-          type="text"
-          value={codigoQR}
-          onChange={(e) =>
-            setCodigoQR(
-              e.target.value
-            )
-          }
-          placeholder="Código QR"
-          className="w-full p-3 rounded bg-zinc-800 mb-4"
-        />
+          <div
+            id="reader"
+            className={`max-w-md mx-auto ${
+              estado !== "esperando"
+                ? "opacity-30"
+                : ""
+            }`}
+          />
 
-        <button
-          onClick={() =>
-            buscarQR(codigoQR)
-          }
-          className="bg-blue-600 hover:bg-blue-700 p-3 rounded font-bold w-full"
-        >
-          {loading
-            ? "Buscando..."
-            : "Buscar QR"}
-        </button>
-
-        {venta && (
-          <div className="mt-6 bg-zinc-800 p-6 rounded-lg">
-
-            <h2 className="text-3xl font-bold text-green-400 mb-4">
-              Información del Acceso
-            </h2>
-
-            <div className="space-y-2">
-
-              <p>
-                <strong>Ticket:</strong>{" "}
-                {ticketNombre}
+          {estado === "esperando" && (
+            <div className="text-center mt-6">
+              <p className="text-xl text-zinc-300">
+                Esperando QR...
               </p>
-
-              <p>
-                <strong>Cantidad:</strong>{" "}
-                {venta.cantidad}
-              </p>
-
-              <p>
-                <strong>QR:</strong>{" "}
-                {venta.qr_code}
-              </p>
-
-              <p>
-                <strong>Estado:</strong>{" "}
-                {venta.usado
-                  ? "🔴 Ya utilizado"
-                  : "🟢 Disponible"}
-              </p>
-
-              {venta.fecha_ingreso && (
-                <p>
-                  <strong>
-                    Fecha ingreso:
-                  </strong>{" "}
-                  {new Date(
-                    venta.fecha_ingreso
-                  ).toLocaleString()}
-                </p>
-              )}
             </div>
+          )}
 
-            {aficionado && (
-              <div className="mt-6 border-t border-zinc-700 pt-6">
+          {estado === "autorizado" && (
+            <div className="text-center mt-8">
 
-                <h3 className="text-2xl font-bold text-red-400 mb-4">
-                  Datos del Aficionado
-                </h3>
+              <div className="text-8xl mb-4">
+                ✅
+              </div>
 
+              <h2 className="text-5xl font-bold text-green-400 mb-6">
+                ACCESO AUTORIZADO
+              </h2>
+
+              <div className="text-2xl space-y-3">
                 <p>
-                  <strong>Nombre:</strong>{" "}
-                  {aficionado.nombre}
+                  Comprador:
+                  <strong>
+                    {" "}
+                    {comprador}
+                  </strong>
                 </p>
 
                 <p>
-                  <strong>Cédula:</strong>{" "}
-                  {aficionado.cedula}
+                  Zona:
+                  <strong>
+                    {" "}
+                    {ticket}
+                  </strong>
                 </p>
 
                 <p>
-                  <strong>Correo:</strong>{" "}
-                  {aficionado.email}
-                </p>
-
-                <p>
-                  <strong>Teléfono:</strong>{" "}
-                  {aficionado.telefono}
+                  Cantidad:
+                  <strong>
+                    {" "}
+                    {cantidad}
+                  </strong>
                 </p>
               </div>
-            )}
 
-            {!venta.usado && (
-              <button
-                onClick={
-                  validarIngreso
-                }
-                className="mt-6 bg-green-600 hover:bg-green-700 p-3 rounded font-bold w-full"
-              >
-                Permitir Acceso
-              </button>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {mensaje && (
-          <div className="mt-6 text-xl font-bold">
-            {mensaje}
-          </div>
-        )}
+          {estado === "denegado" && (
+            <div className="text-center mt-8">
+
+              <div className="text-8xl mb-4">
+                ❌
+              </div>
+
+              <h2 className="text-5xl font-bold text-red-400 mb-4">
+                ACCESO DENEGADO
+              </h2>
+
+              <p className="text-3xl">
+                {mensaje}
+              </p>
+
+            </div>
+          )}
+
+        </div>
       </div>
     </main>
   );

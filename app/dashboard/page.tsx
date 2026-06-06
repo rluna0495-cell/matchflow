@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+interface Venta {
+  id: number;
+  comprador: string;
+  cantidad: number;
+  usado: boolean;
+  ticket_id: number;
+}
+
 export default function DashboardPage() {
   const [eventos, setEventos] = useState(0);
   const [tickets, setTickets] = useState(0);
@@ -17,6 +25,8 @@ export default function DashboardPage() {
   const [partido, setPartido] = useState("");
   const [fecha, setFecha] = useState("");
   const [estadio, setEstadio] = useState("");
+
+  const [ultimasVentas, setUltimasVentas] = useState<Venta[]>([]);
 
   useEffect(() => {
     cargarDashboard();
@@ -59,6 +69,14 @@ export default function DashboardPage() {
     const { data: ventasData } = await supabase
       .from("ventas")
       .select("*");
+
+    const { data: ultimasVentasData } = await supabase
+      .from("ventas")
+      .select("*")
+      .order("id", { ascending: false })
+      .limit(5);
+
+    setUltimasVentas(ultimasVentasData || []);
 
     let totalIngresos = 0;
     let totalVendidas = 0;
@@ -158,7 +176,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
 
         <div className="bg-green-900 p-6 rounded-xl">
-          <h2 className="text-sm text-green-200">
+          <h2 className="text-green-200 text-sm">
             Ingresos Totales
           </h2>
 
@@ -168,7 +186,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="bg-blue-900 p-6 rounded-xl">
-          <h2 className="text-sm text-blue-200">
+          <h2 className="text-blue-200 text-sm">
             Entradas Vendidas
           </h2>
 
@@ -178,7 +196,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="bg-yellow-900 p-6 rounded-xl">
-          <h2 className="text-sm text-yellow-200">
+          <h2 className="text-yellow-200 text-sm">
             Stock Disponible
           </h2>
 
@@ -188,7 +206,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="bg-purple-900 p-6 rounded-xl">
-          <h2 className="text-sm text-purple-200">
+          <h2 className="text-purple-200 text-sm">
             Ocupación
           </h2>
 
@@ -204,7 +222,7 @@ export default function DashboardPage() {
           Próximo Evento
         </h2>
 
-        <p className="text-xl font-semibold">
+        <p className="text-2xl font-bold text-red-400">
           {partido}
         </p>
 
@@ -218,16 +236,57 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-8 bg-zinc-900 rounded-xl p-6">
+        <h2 className="text-2xl font-bold mb-6">
+          Últimas Ventas
+        </h2>
+
+        {ultimasVentas.length === 0 ? (
+          <p>No hay ventas registradas.</p>
+        ) : (
+          <div className="space-y-3">
+            {ultimasVentas.map((venta) => (
+              <div
+                key={venta.id}
+                className="bg-zinc-800 p-4 rounded-lg flex justify-between items-center"
+              >
+                <div>
+                  <p className="font-bold text-lg">
+                    {venta.comprador}
+                  </p>
+
+                  <p className="text-zinc-400">
+                    Cantidad: {venta.cantidad}
+                  </p>
+                </div>
+
+                <div>
+                  {venta.usado ? (
+                    <span className="text-red-400 font-bold">
+                      QR Utilizado
+                    </span>
+                  ) : (
+                    <span className="text-green-400 font-bold">
+                      QR Disponible
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8 bg-zinc-900 rounded-xl p-6">
         <h2 className="text-2xl font-bold mb-4">
           Estado del Sistema
         </h2>
 
-        <p>
-          Plataforma MatchFlow operativa.
+        <p className="text-green-400 font-semibold">
+          ● Plataforma Operativa
         </p>
 
         <p className="text-zinc-400 mt-2">
-          Eventos, Tickets, Ventas y Accesos QR conectados con Supabase.
+          Eventos, Tickets, Ventas, Reportes y Accesos QR conectados correctamente con Supabase.
         </p>
       </div>
     </main>
