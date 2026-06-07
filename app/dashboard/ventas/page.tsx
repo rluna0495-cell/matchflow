@@ -119,17 +119,23 @@ export default function VentasPage() {
       Math.floor(Math.random() * 100000);
 
     const { error } = await supabase
-      .from("ventas")
-      .insert([
-        {
-          ticket_id: ticket.id,
-          comprador: aficionado.nombre,
-          cantidad: Number(cantidad),
-          qr_code: qr,
-          usado: false,
-          aficionado_id: aficionado.id,
-        },
-      ]);
+  .from("ventas")
+  .insert([
+    {
+      ticket_id: ticket.id,
+      comprador: aficionado.nombre,
+      cantidad: Number(cantidad),
+      qr_code: qr,
+      usado: false,
+      aficionado_id: aficionado.id,
+
+      precio_unitario: ticket.precio,
+
+      total:
+        ticket.precio *
+        Number(cantidad),
+    },
+  ]);
 
     if (error) {
       alert(error.message);
@@ -182,137 +188,229 @@ export default function VentasPage() {
   }, []);
 
   return (
-    <main className="p-8 text-white">
-      <h1 className="text-5xl font-bold text-red-500 mb-8">
+  <main className="space-y-8">
+
+    <div>
+      <h1 className="text-5xl font-black text-white">
         Gestión de Ventas
       </h1>
 
-      <div className="bg-zinc-900 p-6 rounded-xl mb-10">
-        <h2 className="text-2xl font-bold mb-4">
-          Registrar Venta
+      <p className="text-zinc-400 mt-2">
+        Registro, control y emisión de tickets digitales.
+      </p>
+    </div>
+
+    {/* KPIs */}
+
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+      <div className="bg-[#081225] border border-[#16213E] rounded-3xl p-6">
+        <p className="text-zinc-400">
+          Tickets
+        </p>
+
+        <h2 className="text-4xl font-bold mt-2">
+          {tickets.length}
         </h2>
-
-        <div className="flex flex-col gap-4">
-          <select
-            value={ticketId}
-            onChange={(e) =>
-              setTicketId(e.target.value)
-            }
-            className="p-3 rounded bg-zinc-800"
-          >
-            <option value="">
-              Selecciona Ticket
-            </option>
-
-            {tickets.map((ticket) => (
-              <option
-                key={ticket.id}
-                value={ticket.id}
-              >
-                {ticket.nombre} - Stock:{" "}
-                {ticket.cantidad}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={aficionadoId}
-            onChange={(e) =>
-              setAficionadoId(e.target.value)
-            }
-            className="p-3 rounded bg-zinc-800"
-          >
-            <option value="">
-              Selecciona Aficionado
-            </option>
-
-            {aficionados.map((aficionado) => (
-              <option
-                key={aficionado.id}
-                value={aficionado.id}
-              >
-                {aficionado.nombre}
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="number"
-            placeholder="Cantidad"
-            value={cantidad}
-            onChange={(e) =>
-              setCantidad(e.target.value)
-            }
-            className="p-3 rounded bg-zinc-800"
-          />
-
-          <button
-            onClick={registrarVenta}
-            className="bg-red-600 p-3 rounded font-bold"
-          >
-            Registrar Venta
-          </button>
-        </div>
       </div>
 
-      <div className="bg-zinc-900 p-6 rounded-xl">
-        <h2 className="text-2xl font-bold mb-6">
-          Ventas Registradas
+      <div className="bg-[#081225] border border-[#16213E] rounded-3xl p-6">
+        <p className="text-zinc-400">
+          Aficionados
+        </p>
+
+        <h2 className="text-4xl font-bold mt-2">
+          {aficionados.length}
         </h2>
+      </div>
 
-        <div className="space-y-6">
-          {ventas.map((venta) => {
-            const ticket = tickets.find(
-              (t) => t.id === venta.ticket_id
-            );
+      <div className="bg-[#081225] border border-[#16213E] rounded-3xl p-6">
+        <p className="text-zinc-400">
+          Ventas
+        </p>
 
-            return (
-              <div
-                key={venta.id}
-                className="bg-zinc-800 p-5 rounded-xl"
-              >
-                <h3 className="text-xl font-bold">
-                  {venta.comprador}
-                </h3>
+        <h2 className="text-4xl font-bold mt-2">
+          {ventas.length}
+        </h2>
+      </div>
 
-                <p>
-                  Ticket: {ticket?.nombre}
-                </p>
+      <div className="bg-[#081225] border border-[#16213E] rounded-3xl p-6">
+        <p className="text-zinc-400">
+          Disponibles
+        </p>
 
-                <p>
-                  Cantidad: {venta.cantidad}
-                </p>
+        <h2 className="text-4xl font-bold text-green-400 mt-2">
+          {
+            tickets.reduce(
+              (total, ticket) =>
+                total + ticket.cantidad,
+              0
+            )
+          }
+        </h2>
+      </div>
 
-                <p>
-                  Estado:
-                  {venta.usado
-                    ? " 🔴 Usado"
-                    : " 🟢 Disponible"}
-                </p>
+    </div>
 
-                <p>
-                  QR: {venta.qr_code}
-                </p>
+    <div className="grid lg:grid-cols-3 gap-8">
 
-                <img
-                  src={venta.qr_image}
-                  alt="QR"
-                  className="w-40 mt-4 bg-white p-2 rounded"
-                />
+      {/* FORM */}
 
-                <button
-                  onClick={() =>
-                    descargarPDF(venta)
-                  }
-                  className="mt-4 bg-green-600 px-4 py-2 rounded font-bold"
+      <div className="lg:col-span-1">
+
+        <div className="bg-[#081225] border border-[#16213E] rounded-3xl p-6">
+
+          <h2 className="text-3xl font-bold mb-6">
+            Nueva Venta
+          </h2>
+
+          <div className="space-y-4">
+
+            <select
+              value={ticketId}
+              onChange={(e) =>
+                setTicketId(e.target.value)
+              }
+              className="w-full bg-black border border-zinc-700 rounded-xl p-4"
+            >
+              <option value="">
+                Seleccionar Ticket
+              </option>
+
+              {tickets.map((ticket) => (
+                <option
+                  key={ticket.id}
+                  value={ticket.id}
                 >
-                  Descargar Ticket PDF
-                </button>
-              </div>
-            );
-          })}
+                  {ticket.nombre} | Stock: {ticket.cantidad}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={aficionadoId}
+              onChange={(e) =>
+                setAficionadoId(e.target.value)
+              }
+              className="w-full bg-black border border-zinc-700 rounded-xl p-4"
+            >
+              <option value="">
+                Seleccionar Aficionado
+              </option>
+
+              {aficionados.map((aficionado) => (
+                <option
+                  key={aficionado.id}
+                  value={aficionado.id}
+                >
+                  {aficionado.nombre}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              placeholder="Cantidad"
+              value={cantidad}
+              onChange={(e) =>
+                setCantidad(e.target.value)
+              }
+              className="w-full bg-black border border-zinc-700 rounded-xl p-4"
+            />
+
+            <button
+              onClick={registrarVenta}
+              className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl p-4 font-bold transition"
+            >
+              Registrar Venta
+            </button>
+
+          </div>
+
         </div>
+
       </div>
-    </main>
-  );
+
+      {/* HISTORIAL */}
+
+      <div className="lg:col-span-2">
+
+        <div className="bg-[#081225] border border-[#16213E] rounded-3xl p-6">
+
+          <h2 className="text-3xl font-bold mb-6">
+            Ventas Registradas
+          </h2>
+
+          <div className="grid xl:grid-cols-2 gap-6">
+
+            {ventas.map((venta) => {
+              const ticket = tickets.find(
+                (t) =>
+                  t.id === venta.ticket_id
+              );
+
+              return (
+                <div
+                  key={venta.id}
+                  className="bg-black border border-zinc-800 rounded-2xl p-5"
+                >
+                  <h3 className="font-bold text-xl mb-2">
+                    {venta.comprador}
+                  </h3>
+
+                  <p className="text-zinc-400">
+                    Ticket:
+                    {" "}
+                    {ticket?.nombre}
+                  </p>
+
+                  <p className="text-zinc-400">
+                    Cantidad:
+                    {" "}
+                    {venta.cantidad}
+                  </p>
+
+                  <div className="mt-3">
+
+                    {venta.usado ? (
+                      <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-sm">
+                        Usado
+                      </span>
+                    ) : (
+                      <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm">
+                        Disponible
+                      </span>
+                    )}
+
+                  </div>
+
+                  <img
+                    src={venta.qr_image}
+                    alt="QR"
+                    className="w-40 mt-5 bg-white rounded-xl p-2"
+                  />
+
+                  <button
+                    onClick={() =>
+                      descargarPDF(venta)
+                    }
+                    className="mt-5 w-full bg-green-600 hover:bg-green-700 rounded-xl p-3 font-bold transition"
+                  >
+                    Descargar PDF
+                  </button>
+
+                </div>
+              );
+            })}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+);
 }
