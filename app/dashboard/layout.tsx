@@ -3,6 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Ticket,
+  DollarSign,
+  QrCode,
+  BarChart3,
+  Users,
+  Settings,
+} from "lucide-react";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -14,63 +25,61 @@ export default function DashboardLayout({
     {
       name: "Dashboard",
       href: "/dashboard",
-      icon: "📊",
+      icon: LayoutDashboard,
     },
     {
       name: "Eventos",
       href: "/dashboard/eventos",
-      icon: "🏟️",
+      icon: CalendarDays,
     },
     {
       name: "Tickets",
       href: "/dashboard/tickets",
-      icon: "🎟️",
+      icon: Ticket,
     },
     {
       name: "Ventas",
       href: "/dashboard/ventas",
-      icon: "💰",
+      icon: DollarSign,
     },
     {
       name: "Accesos QR",
       href: "/dashboard/accesos-qr",
-      icon: "📱",
+      icon: QrCode,
     },
     {
       name: "Reportes",
       href: "/dashboard/reportes",
-      icon: "📈",
+      icon: BarChart3,
     },
     {
       name: "Aficionados",
       href: "/dashboard/aficionados",
-      icon: "👥",
+      icon: Users,
     },
     {
       name: "Configuración",
-      href: "#",
-      icon: "⚙️",
+      href: "/dashboard/configuracion",
+      icon: Settings,
     },
   ];
 
   return (
     <div className="min-h-screen flex bg-[#09090B] text-white">
 
-      {/* SIDEBAR */}
+      <aside className="w-72 bg-[#111827] border-r border-slate-800 flex flex-col">
 
-      <aside className="w-72 bg-[#111114] border-r border-zinc-800 flex flex-col">
+        <div className="p-8 border-b border-slate-800">
 
-        <div className="p-8 border-b border-zinc-800">
-
-          <h1 className="text-3xl font-black tracking-wider">
-            <span className="text-red-500">
-              MATCH
+          <h1 className="text-3xl font-black tracking-tight">
+            <span className="text-blue-500">
+              Match
             </span>
-            FLOW
+            Flow
           </h1>
 
-          <p className="text-zinc-500 text-sm mt-2">
-            Sports Ticketing SaaS
+          <p className="text-slate-400 text-sm mt-2">
+            Sports Ticketing Platform
           </p>
 
         </div>
@@ -81,31 +90,19 @@ export default function DashboardLayout({
             const active =
               pathname === item.href;
 
+            const Icon = item.icon;
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`
-                  flex
-                  items-center
-                  gap-4
-                  px-4
-                  py-4
-                  rounded-xl
-                  transition-all
-                  duration-200
-                  font-medium
-
-                  ${
-                    active
-                      ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
-                      : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-                  }
-                `}
+                className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-200 font-medium ${
+                  active
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                    : "text-slate-400 hover:bg-slate-900 hover:text-white"
+                }`}
               >
-                <span className="text-xl">
-                  {item.icon}
-                </span>
+                <Icon size={20} />
 
                 <span>
                   {item.name}
@@ -116,24 +113,26 @@ export default function DashboardLayout({
 
         </nav>
 
-        <div className="p-6 border-t border-zinc-800">
+        <div className="p-6 border-t border-slate-800">
 
-          <div className="bg-zinc-900 rounded-2xl p-4">
+          <div className="bg-slate-900 rounded-2xl p-4">
 
-            <p className="text-zinc-500 text-xs uppercase tracking-wider">
+            <p className="text-slate-500 text-xs uppercase tracking-wider">
               Sistema
             </p>
 
             <p className="font-bold mt-2">
-              MatchFlow SaaS
+              MatchFlow Pro
             </p>
 
             <div className="flex items-center gap-2 mt-3">
+
               <div className="w-2 h-2 rounded-full bg-green-500" />
 
               <span className="text-green-400 text-sm">
                 Operativo
               </span>
+
             </div>
 
           </div>
@@ -142,41 +141,39 @@ export default function DashboardLayout({
 
       </aside>
 
-      {/* CONTENIDO */}
-
       <div className="flex-1 flex flex-col">
 
-        {/* HEADER */}
-
-        <header className="h-20 border-b border-zinc-800 bg-[#111114] flex items-center justify-between px-8">
+        <header className="h-20 border-b border-slate-800 bg-[#111827] flex items-center justify-between px-8">
 
           <div>
+
             <h2 className="text-xl font-bold">
-              Plataforma de Gestión Deportiva
+              Centro de Operaciones
             </h2>
 
-            <p className="text-zinc-500 text-sm">
-              Control de eventos, ventas y accesos
+            <p className="text-slate-400 text-sm">
+              Monitoreo y administración de la plataforma
             </p>
+
           </div>
 
           <div className="flex items-center gap-4">
 
-            <div className="bg-zinc-900 px-4 py-2 rounded-xl">
-              <span className="text-zinc-400 text-sm">
+            <div className="bg-slate-900 px-4 py-2 rounded-xl">
+
+              <span className="text-slate-400 text-sm">
                 Producción
               </span>
+
             </div>
 
-            <div className="w-11 h-11 rounded-full bg-red-600 flex items-center justify-center font-bold">
+            <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center font-bold">
               RL
             </div>
 
           </div>
 
         </header>
-
-        {/* PAGE */}
 
         <main className="flex-1 p-8 overflow-auto">
           {children}

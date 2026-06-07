@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  DollarSign,
+  Ticket,
+  Users,
+  QrCode,
+  CalendarDays,
+  TrendingUp,
+} from "lucide-react";
 
 interface Venta {
   id: number;
@@ -89,9 +97,7 @@ export default function DashboardPage() {
         );
 
         if (ticket) {
-          totalIngresos +=
-            ticket.precio * venta.cantidad;
-
+          totalIngresos += ticket.precio * venta.cantidad;
           totalVendidas += venta.cantidad;
         }
       });
@@ -101,15 +107,11 @@ export default function DashboardPage() {
       });
     }
 
-    const capacidadTotal =
-      totalStock + totalVendidas;
+    const capacidadTotal = totalStock + totalVendidas;
 
     const porcentaje =
       capacidadTotal > 0
-        ? (
-            (totalVendidas / capacidadTotal) *
-            100
-          ).toFixed(2)
+        ? ((totalVendidas / capacidadTotal) * 100).toFixed(1)
         : "0";
 
     setEventos(eventosCount || 0);
@@ -124,171 +126,181 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-8">
-      <h1 className="text-5xl font-bold text-red-500 mb-8">
-        MATCHFLOW Dashboard
-      </h1>
+    <div className="space-y-8">
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-
-        <div className="bg-zinc-900 p-6 rounded-xl">
-          <h2 className="text-zinc-400 text-sm">
-            Eventos
-          </h2>
-
-          <p className="text-4xl font-bold mt-2">
-            {eventos}
-          </p>
-        </div>
-
-        <div className="bg-zinc-900 p-6 rounded-xl">
-          <h2 className="text-zinc-400 text-sm">
-            Tickets
-          </h2>
-
-          <p className="text-4xl font-bold mt-2">
-            {tickets}
-          </p>
-        </div>
-
-        <div className="bg-zinc-900 p-6 rounded-xl">
-          <h2 className="text-zinc-400 text-sm">
-            Ventas
-          </h2>
-
-          <p className="text-4xl font-bold mt-2">
-            {ventas}
-          </p>
-        </div>
-
-        <div className="bg-zinc-900 p-6 rounded-xl">
-          <h2 className="text-zinc-400 text-sm">
-            Accesos Utilizados
-          </h2>
-
-          <p className="text-4xl font-bold mt-2">
-            {accesos}
-          </p>
-        </div>
-
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-
-        <div className="bg-green-900 p-6 rounded-xl">
-          <h2 className="text-green-200 text-sm">
-            Ingresos Totales
-          </h2>
-
-          <p className="text-3xl font-bold mt-2">
-            ${ingresos.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="bg-blue-900 p-6 rounded-xl">
-          <h2 className="text-blue-200 text-sm">
-            Entradas Vendidas
-          </h2>
-
-          <p className="text-3xl font-bold mt-2">
-            {entradasVendidas}
-          </p>
-        </div>
-
-        <div className="bg-yellow-900 p-6 rounded-xl">
-          <h2 className="text-yellow-200 text-sm">
-            Stock Disponible
-          </h2>
-
-          <p className="text-3xl font-bold mt-2">
-            {stockDisponible}
-          </p>
-        </div>
-
-        <div className="bg-purple-900 p-6 rounded-xl">
-          <h2 className="text-purple-200 text-sm">
-            Ocupación
-          </h2>
-
-          <p className="text-3xl font-bold mt-2">
-            {ocupacion}%
-          </p>
-        </div>
-
-      </div>
-
-      <div className="mt-8 bg-zinc-900 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-4">
-          Próximo Evento
-        </h2>
-
-        <p className="text-2xl font-bold text-red-400">
-          {partido}
-        </p>
+      <div>
+        <h1 className="text-4xl font-bold">
+          Dashboard
+        </h1>
 
         <p className="text-zinc-400 mt-2">
-          {fecha}
-        </p>
-
-        <p className="text-zinc-400">
-          {estadio}
+          Resumen general de la operación.
         </p>
       </div>
 
-      <div className="mt-8 bg-zinc-900 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-6">
+      <div className="grid gap-6 md:grid-cols-4">
+
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <div className="flex justify-between">
+            <span className="text-zinc-400">
+              Ingresos
+            </span>
+
+            <DollarSign size={20} />
+          </div>
+
+          <h2 className="text-3xl font-bold mt-4">
+            ${ingresos.toLocaleString()}
+          </h2>
+        </div>
+
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <div className="flex justify-between">
+            <span className="text-zinc-400">
+              Ventas
+            </span>
+
+            <TrendingUp size={20} />
+          </div>
+
+          <h2 className="text-3xl font-bold mt-4">
+            {ventas}
+          </h2>
+        </div>
+
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <div className="flex justify-between">
+            <span className="text-zinc-400">
+              Entradas
+            </span>
+
+            <Ticket size={20} />
+          </div>
+
+          <h2 className="text-3xl font-bold mt-4">
+            {entradasVendidas}
+          </h2>
+        </div>
+
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <div className="flex justify-between">
+            <span className="text-zinc-400">
+              Ocupación
+            </span>
+
+            <Users size={20} />
+          </div>
+
+          <h2 className="text-3xl font-bold mt-4">
+            {ocupacion}%
+          </h2>
+        </div>
+
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+
+        <div className="lg:col-span-2 bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+
+          <div className="flex items-center gap-2 mb-6">
+            <CalendarDays size={20} />
+            <h2 className="font-bold text-xl">
+              Próximo Evento
+            </h2>
+          </div>
+
+          <h3 className="text-3xl font-bold">
+            {partido}
+          </h3>
+
+          <p className="text-zinc-400 mt-3">
+            {fecha}
+          </p>
+
+          <p className="text-zinc-400">
+            {estadio}
+          </p>
+
+        </div>
+
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+
+          <div className="flex items-center gap-2 mb-6">
+            <QrCode size={20} />
+            <h2 className="font-bold text-xl">
+              Accesos
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+
+            <div>
+              <p className="text-zinc-400">
+                Utilizados
+              </p>
+
+              <h3 className="text-3xl font-bold">
+                {accesos}
+              </h3>
+            </div>
+
+            <div>
+              <p className="text-zinc-400">
+                Disponibles
+              </p>
+
+              <h3 className="text-3xl font-bold">
+                {stockDisponible}
+              </h3>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+
+        <h2 className="text-xl font-bold mb-6">
           Últimas Ventas
         </h2>
 
-        {ultimasVentas.length === 0 ? (
-          <p>No hay ventas registradas.</p>
-        ) : (
-          <div className="space-y-3">
-            {ultimasVentas.map((venta) => (
-              <div
-                key={venta.id}
-                className="bg-zinc-800 p-4 rounded-lg flex justify-between items-center"
-              >
-                <div>
-                  <p className="font-bold text-lg">
-                    {venta.comprador}
-                  </p>
+        <div className="space-y-4">
 
-                  <p className="text-zinc-400">
-                    Cantidad: {venta.cantidad}
-                  </p>
-                </div>
+          {ultimasVentas.map((venta) => (
+            <div
+              key={venta.id}
+              className="flex justify-between items-center bg-[#0F172A] border border-zinc-800 rounded-xl p-4"
+            >
+              <div>
+                <p className="font-semibold">
+                  {venta.comprador}
+                </p>
 
-                <div>
-                  {venta.usado ? (
-                    <span className="text-red-400 font-bold">
-                      QR Utilizado
-                    </span>
-                  ) : (
-                    <span className="text-green-400 font-bold">
-                      QR Disponible
-                    </span>
-                  )}
-                </div>
+                <p className="text-sm text-zinc-400">
+                  {venta.cantidad} entradas
+                </p>
               </div>
-            ))}
-          </div>
-        )}
+
+              <span
+                className={`text-sm font-medium ${
+                  venta.usado
+                    ? "text-red-400"
+                    : "text-green-400"
+                }`}
+              >
+                {venta.usado
+                  ? "QR Utilizado"
+                  : "QR Disponible"}
+              </span>
+            </div>
+          ))}
+
+        </div>
+
       </div>
 
-      <div className="mt-8 bg-zinc-900 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-4">
-          Estado del Sistema
-        </h2>
-
-        <p className="text-green-400 font-semibold">
-          ● Plataforma Operativa
-        </p>
-
-        <p className="text-zinc-400 mt-2">
-          Eventos, Tickets, Ventas, Reportes y Accesos QR conectados correctamente con Supabase.
-        </p>
-      </div>
-    </main>
+    </div>
   );
 }
