@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Ticket,
+  Search,
+  Pencil,
+  Trash2,
+  Plus,
+  CalendarDays,
+  MapPin,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface Ticket {
@@ -29,6 +38,9 @@ export default function TicketsPage() {
 
   const [editandoId, setEditandoId] =
     useState<number | null>(null);
+
+  const [busqueda, setBusqueda] =
+    useState("");
 
   async function cargarDatos() {
     const { data: ticketsData } = await supabase
@@ -160,6 +172,57 @@ export default function TicketsPage() {
     );
   }
 
+  const ticketsFiltrados = tickets.filter(
+    (ticket) => {
+      const evento = obtenerEvento(
+        ticket.evento_id
+      );
+
+      const texto =
+        busqueda.toLowerCase();
+
+      return (
+        ticket.nombre
+          .toLowerCase()
+          .includes(texto) ||
+        evento?.partido
+          .toLowerCase()
+          .includes(texto) ||
+        evento?.estadio
+          .toLowerCase()
+          .includes(texto)
+      );
+    }
+  );
+
+  const totalTickets =
+    tickets.length;
+
+  const stockDisponible =
+    tickets.reduce(
+      (acc, ticket) =>
+        acc + ticket.cantidad,
+      0
+    );
+
+  const eventosAsociados =
+    new Set(
+      tickets.map(
+        (t) => t.evento_id
+      )
+    ).size;
+
+  const precioPromedio =
+    tickets.length > 0
+      ? Math.round(
+          tickets.reduce(
+            (acc, ticket) =>
+              acc + ticket.precio,
+            0
+          ) / tickets.length
+        )
+      : 0;
+
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -167,181 +230,284 @@ export default function TicketsPage() {
   return (
     <main className="p-8 text-white">
 
-      <h1 className="text-5xl font-bold text-red-500 mb-8">
-        Gestión de Tickets
-      </h1>
+      <div>
+        <h1 className="text-4xl font-black">
+          Gestión de Tickets
+        </h1>
 
-      <div className="bg-zinc-900 p-6 rounded-xl mb-8">
+        <p className="text-zinc-400 mt-2">
+          Administra zonas, precios y
+          disponibilidad para cada evento.
+        </p>
+      </div>
 
-        <h2 className="text-2xl font-bold mb-4">
-          {editandoId
-            ? "Editar Ticket"
-            : "Crear Ticket"}
-        </h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
 
-        <div className="flex flex-col gap-4">
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <p className="text-zinc-400 text-sm">
+            Total Tickets
+          </p>
 
-          <select
-            value={eventoId}
-            onChange={(e) =>
-              setEventoId(e.target.value)
-            }
-            className="p-3 rounded bg-zinc-800"
-          >
-            <option value="">
-              Selecciona un evento
-            </option>
+          <h2 className="text-4xl font-black mt-2">
+            {totalTickets}
+          </h2>
+        </div>
 
-            {eventos.map((evento) => (
-              <option
-                key={evento.id}
-                value={evento.id}
-              >
-                {evento.partido}
-              </option>
-            ))}
-          </select>
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <p className="text-zinc-400 text-sm">
+            Stock Disponible
+          </p>
 
-          <input
-            value={nombre}
-            onChange={(e) =>
-              setNombre(e.target.value)
-            }
-            placeholder="Nombre del ticket"
-            className="p-3 rounded bg-zinc-800"
-          />
+          <h2 className="text-4xl font-black mt-2">
+            {stockDisponible}
+          </h2>
+        </div>
 
-          <input
-            type="number"
-            value={precio}
-            onChange={(e) =>
-              setPrecio(e.target.value)
-            }
-            placeholder="Precio"
-            className="p-3 rounded bg-zinc-800"
-          />
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <p className="text-zinc-400 text-sm">
+            Eventos Asociados
+          </p>
 
-          <input
-            type="number"
-            value={cantidad}
-            onChange={(e) =>
-              setCantidad(e.target.value)
-            }
-            placeholder="Cantidad disponible"
-            className="p-3 rounded bg-zinc-800"
-          />
+          <h2 className="text-4xl font-black mt-2">
+            {eventosAsociados}
+          </h2>
+        </div>
 
-          <div className="flex gap-3">
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <p className="text-zinc-400 text-sm">
+            Precio Promedio
+          </p>
 
-            <button
-              onClick={guardarTicket}
-              className="bg-red-600 hover:bg-red-700 p-3 rounded font-bold"
+          <h2 className="text-4xl font-black mt-2 text-blue-500">
+            $
+            {precioPromedio.toLocaleString()}
+          </h2>
+        </div>
+
+      </div>
+
+      {/* NUEVA ESTRUCTURA EN GRID HORIZONTAL */}
+      <div className="grid lg:grid-cols-3 gap-8 mt-8">
+
+        {/* CONTENEDOR DEL FORMULARIO (OCUPA 1 COLUMNA) */}
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+
+          <h2 className="text-2xl font-bold mb-4">
+            {editandoId
+              ? "Editar Ticket"
+              : "Crear Ticket"}
+          </h2>
+
+          <div className="flex flex-col gap-4">
+
+            <select
+              value={eventoId}
+              onChange={(e) =>
+                setEventoId(e.target.value)
+              }
+              className="bg-[#0F172A] border border-zinc-700 rounded-xl p-3"
             >
-              {editandoId
-                ? "Guardar Cambios"
-                : "Crear Ticket"}
-            </button>
+              <option value="">
+                Selecciona un evento
+              </option>
 
-            {editandoId && (
+              {eventos.map((evento) => (
+                <option
+                  key={evento.id}
+                  value={evento.id}
+                >
+                  {evento.partido}
+                </option>
+              ))}
+            </select>
+
+            <input
+              value={nombre}
+              onChange={(e) =>
+                setNombre(e.target.value)
+              }
+              placeholder="Nombre del ticket"
+              className="bg-[#0F172A] border border-zinc-700 rounded-xl p-3"
+            />
+
+            <input
+              type="number"
+              value={precio}
+              onChange={(e) =>
+                setPrecio(e.target.value)
+              }
+              placeholder="Precio"
+              className="bg-[#0F172A] border border-zinc-700 rounded-xl p-3"
+            />
+
+            <input
+              type="number"
+              value={cantidad}
+              onChange={(e) =>
+                setCantidad(e.target.value)
+              }
+              placeholder="Cantidad disponible"
+              className="bg-[#0F172A] border border-zinc-700 rounded-xl p-3"
+            />
+
+            <div className="flex gap-3">
+
               <button
-                onClick={limpiarFormulario}
-                className="bg-zinc-700 hover:bg-zinc-600 p-3 rounded font-bold"
+                onClick={guardarTicket}
+                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold"
               >
-                Cancelar
+                {editandoId
+                  ? "Guardar Cambios"
+                  : "Crear Ticket"}
               </button>
-            )}
+
+              {editandoId && (
+                <button
+                  onClick={limpiarFormulario}
+                  className="bg-zinc-700 hover:bg-zinc-600 px-6 py-3 rounded-xl font-semibold"
+                >
+                  Cancelar
+                </button>
+              )}
+
+            </div>
 
           </div>
 
         </div>
 
-      </div>
+        {/* CONTENEDOR DEL LISTADO DE TICKETS (OCUPA 2 COLUMNAS) */}
+        <div className="lg:col-span-2 bg-[#111827] border border-zinc-800 rounded-2xl p-6">
 
-      <div className="bg-zinc-900 p-6 rounded-xl">
+          <div className="flex justify-between items-center mb-6">
 
-        <h2 className="text-2xl font-bold mb-4">
-          Tickets Registrados
-        </h2>
+            <h2 className="text-xl font-bold">
+              Tickets Registrados
+            </h2>
 
-        {tickets.length === 0 ? (
-          <p>No hay tickets registrados.</p>
-        ) : (
-          <div className="flex flex-col gap-4">
+            <div className="relative">
 
-            {tickets.map((ticket) => {
-              const evento =
-                obtenerEvento(
-                  ticket.evento_id
-                );
+              <Search
+                size={18}
+                className="absolute left-3 top-3 text-zinc-500"
+              />
 
-              return (
-                <div
-                  key={ticket.id}
-                  className="bg-zinc-800 p-5 rounded-lg"
-                >
+              <input
+                value={busqueda}
+                onChange={(e) =>
+                  setBusqueda(
+                    e.target.value
+                  )
+                }
+                placeholder="Buscar ticket..."
+                className="bg-[#0F172A] border border-zinc-700 rounded-xl pl-10 pr-4 py-2"
+              />
 
-                  {evento && (
-                    <>
-                      <h3 className="text-2xl font-bold text-red-400">
-                        {evento.partido}
-                      </h3>
-
-                      <p>{evento.fecha}</p>
-
-                      <p className="mb-4">
-                        {evento.estadio}
-                      </p>
-                    </>
-                  )}
-
-                  <hr className="border-zinc-700 mb-4" />
-
-                  <h4 className="text-xl font-bold">
-                    {ticket.nombre}
-                  </h4>
-
-                  <p>
-                    Precio: $
-                    {ticket.precio.toLocaleString()}
-                  </p>
-
-                  <p>
-                    Disponibles:{" "}
-                    {ticket.cantidad}
-                  </p>
-
-                  <div className="flex gap-3 mt-4">
-
-                    <button
-                      onClick={() =>
-                        editarTicket(
-                          ticket
-                        )
-                      }
-                      className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        eliminarTicket(
-                          ticket.id
-                        )
-                      }
-                      className="bg-red-700 hover:bg-red-800 px-4 py-2 rounded"
-                    >
-                      Eliminar
-                    </button>
-
-                  </div>
-
-                </div>
-              );
-            })}
+            </div>
 
           </div>
-        )}
+
+          {tickets.length === 0 ? (
+            <p>No hay tickets registrados.</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+
+              {ticketsFiltrados.map((ticket) => {
+                const evento =
+                  obtenerEvento(
+                    ticket.evento_id
+                  );
+
+                return (
+                  <div
+                    key={ticket.id}
+                    className="bg-[#0F172A] border border-zinc-800 rounded-2xl p-5"
+                  >
+
+                    {evento && (
+                      <>
+                        <h3 className="text-xl font-bold text-red-400">
+                          {evento.partido}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-zinc-400 mb-4">
+
+                          <div className="flex items-center gap-2">
+                            <CalendarDays size={14} />
+                            {evento.fecha}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <MapPin size={14} />
+                            {evento.estadio}
+                          </div>
+
+                        </div>
+                      </>
+                    )}
+
+                    <hr className="border-zinc-700 mb-4" />
+
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-xl font-bold">
+                        {ticket.nombre}
+                      </h4>
+
+                      <span
+                        className="
+                          bg-green-500/20
+                          text-green-400
+                          px-3
+                          py-1
+                          rounded-full
+                          text-xs
+                          font-semibold
+                        "
+                      >
+                        Disponible
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3">
+
+                      <div>
+                        <p className="text-2xl font-bold text-white">
+                          ${ticket.precio.toLocaleString()}
+                        </p>
+
+                        <p className="text-sm text-zinc-400">
+                          {ticket.cantidad} disponibles
+                        </p>
+                      </div>
+
+                    </div>
+
+                    <div className="flex gap-3 mt-4">
+
+                      <button
+                        onClick={() => editarTicket(ticket)}
+                        className="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg"
+                      >
+                        <Pencil size={16} />
+                      </button>
+
+                      <button
+                        onClick={() => eliminarTicket(ticket.id)}
+                        className="bg-red-600 hover:bg-red-700 p-3 rounded-lg"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+
+                    </div>
+
+                  </div>
+                );
+              })}
+
+            </div>
+          )}
+
+        </div>
 
       </div>
 
