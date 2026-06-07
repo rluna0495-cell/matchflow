@@ -36,8 +36,15 @@ export default function DashboardPage() {
 
   const [ultimasVentas, setUltimasVentas] = useState<Venta[]>([]);
 
+  // AUTO-REFRESCO IMPLEMENTADO EN EL EFFECT
   useEffect(() => {
     cargarDashboard();
+
+    const interval = setInterval(() => {
+      cargarDashboard();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   async function cargarDashboard() {

@@ -41,8 +41,15 @@ export default function ReportesPage() {
   const [qrUsados, setQrUsados] = useState(0);
   const [qrDisponibles, setQrDisponibles] = useState(0);
 
+  // IMPLEMENTACIÓN DE AUTO-REFRESCO CADA 5 SEGUNDOS
   useEffect(() => {
     cargarReportes();
+
+    const interval = setInterval(() => {
+      cargarReportes();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   async function cargarReportes() {
@@ -108,81 +115,92 @@ export default function ReportesPage() {
   }
 
   return (
-    <main className="p-8 text-white">
+    <main className="p-8 text-white min-h-screen bg-black">
 
-      <h1 className="text-5xl font-bold text-red-500 mb-8">
-        Reportes Ejecutivos
-      </h1>
+      {/* CAMBIO 1 — TÍTULO */}
+      <div className="mb-8">
+        <h1 className="text-5xl font-black">
+          Reportes
+        </h1>
 
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <p className="text-zinc-400 mt-2">
+          Métricas operativas y seguimiento de ventas.
+        </p>
+      </div>
 
-        <div className="bg-green-900 p-6 rounded-xl">
-          <h3 className="text-lg">
+      {/* CORRECCIÓN EXACTA EN LA GRID DE LAS TARJETAS (2 FILAS DE 3 EN XL) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+
+        {/* KPI: Ingresos */}
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-sm text-zinc-400">
             Ingresos Totales
           </h3>
 
-          <p className="text-4xl font-bold mt-2">
+          <p className="text-4xl font-black mt-2 text-white">
             ${totalVendido.toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-blue-900 p-6 rounded-xl">
-          <h3 className="text-lg">
+        {/* KPI: Entradas */}
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-sm text-zinc-400">
             Entradas Vendidas
           </h3>
 
-          <p className="text-4xl font-bold mt-2">
+          <p className="text-5xl font-black mt-2 text-white">
             {totalEntradas}
           </p>
         </div>
 
-        <div className="bg-purple-900 p-6 rounded-xl">
-          <h3 className="text-lg">
+        {/* KPI: Aficionados */}
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-sm text-zinc-400">
             Aficionados
           </h3>
 
-          <p className="text-4xl font-bold mt-2">
+          <p className="text-5xl font-black mt-2 text-white">
             {totalAficionados}
           </p>
         </div>
 
-        <div className="bg-red-900 p-6 rounded-xl">
-          <h3 className="text-lg">
+        {/* KPI: Ventas */}
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-sm text-zinc-400">
             Ventas
           </h3>
 
-          <p className="text-4xl font-bold mt-2">
+          <p className="text-5xl font-black mt-2 text-white">
             {ventas.length}
           </p>
         </div>
 
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-
-        <div className="bg-zinc-900 p-6 rounded-xl">
-          <h3 className="text-xl font-bold text-green-400 mb-3">
+        {/* KPI: QR Utilizados */}
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-sm text-zinc-400">
             QR Utilizados
           </h3>
 
-          <p className="text-5xl font-bold">
+          <p className="text-5xl font-black mt-2 text-white">
             {qrUsados}
           </p>
         </div>
 
-        <div className="bg-zinc-900 p-6 rounded-xl">
-          <h3 className="text-xl font-bold text-yellow-400 mb-3">
+        {/* KPI: QR Disponibles */}
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-sm text-zinc-400">
             QR Disponibles
           </h3>
 
-          <p className="text-5xl font-bold">
+          <p className="text-5xl font-black mt-2 text-white">
             {qrDisponibles}
           </p>
         </div>
 
       </div>
 
-      <div className="bg-zinc-900 rounded-xl p-6 mb-8">
+      {/* CAMBIO 5 — HISTORIAL DE VENTAS */}
+      <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6 mb-8">
 
         <h2 className="text-2xl font-bold mb-6">
           Historial de Ventas
@@ -193,7 +211,7 @@ export default function ReportesPage() {
           <table className="w-full">
 
             <thead>
-              <tr className="border-b border-zinc-700 text-left">
+              <tr className="border-b border-zinc-800 text-left text-zinc-400">
                 <th className="p-3">Comprador</th>
                 <th className="p-3">Ticket</th>
                 <th className="p-3">Cantidad</th>
@@ -205,7 +223,7 @@ export default function ReportesPage() {
               {ventas.map((venta) => (
                 <tr
                   key={venta.id}
-                  className="border-b border-zinc-800"
+                  className="border-b border-zinc-900"
                 >
                   <td className="p-3">
                     {venta.comprador}
@@ -232,7 +250,8 @@ export default function ReportesPage() {
 
       </div>
 
-      <div className="bg-zinc-900 rounded-xl p-6">
+      {/* CAMBIO 7 — STOCK DISPONIBLE */}
+      <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
 
         <h2 className="text-2xl font-bold mb-6">
           Stock Disponible
@@ -243,14 +262,14 @@ export default function ReportesPage() {
           {tickets.map((ticket) => (
             <div
               key={ticket.id}
-              className="flex justify-between bg-zinc-800 p-4 rounded-lg"
+              className="flex justify-between bg-zinc-950 border border-zinc-900 p-4 rounded-xl"
             >
               <span>
                 {ticket.nombre}
               </span>
 
-              <span>
-                Stock: {ticket.cantidad}
+              <span className="text-zinc-400">
+                Stock: <strong className="text-white">{ticket.cantidad}</strong>
               </span>
             </div>
           ))}
