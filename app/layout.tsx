@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-
+import { ModalProvider } from "@/components/modal-provider";
 const inter = Inter({
   subsets: ["latin"],
 });
@@ -24,7 +24,9 @@ export default function RootLayout({
       <body
         className={`${inter.className} min-h-screen bg-[#09090B] text-white antialiased`}
       >
-        {children}
+        <ModalProvider>
+          {children}
+        </ModalProvider>
       </body>
     </html>
   );

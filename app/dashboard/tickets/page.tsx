@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Ticket,
   Search,
@@ -10,6 +11,7 @@ import {
   CalendarDays,
   MapPin,
 } from "lucide-react";
+import { useModal } from "@/components/modal-provider";
 import { supabase } from "@/lib/supabase";
 
 interface Ticket {
@@ -27,7 +29,26 @@ interface Evento {
   estadio: string;
 }
 
+function formatearFecha(fechaStr: string) {
+  if (!fechaStr) return "";
+  try {
+    const d = new Date(fechaStr);
+    if (isNaN(d.getTime())) return fechaStr;
+    return d.toLocaleDateString("es-ES", {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return fechaStr;
+  }
+}
+
 export default function TicketsPage() {
+  const router = useRouter();
+  const { showAlert, showConfirm } = useModal();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
 
@@ -41,6 +62,8 @@ export default function TicketsPage() {
 
   const [busqueda, setBusqueda] =
     useState("");
+
+  const [guardando, setGuardando] = useState(false);
 
   async function cargarDatos() {
     const { data: ticketsData } = await supabase
@@ -64,48 +87,56 @@ export default function TicketsPage() {
       !precio ||
       !cantidad
     ) {
-      alert("Completa todos los campos");
+      await showAlert("Completa todos los campos");
       return;
     }
 
-    if (editandoId) {
-      const { error } = await supabase
-        .from("tickets")
-        .update({
-          evento_id: Number(eventoId),
-          nombre,
-          precio: Number(precio),
-          cantidad: Number(cantidad),
-        })
-        .eq("id", editandoId);
+    if (guardando) return;
+    setGuardando(true);
 
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      alert("Ticket actualizado");
-    } else {
-      const { error } = await supabase
-        .from("tickets")
-        .insert([
-          {
+    try {
+      if (editandoId) {
+        const { error } = await supabase
+          .from("tickets")
+          .update({
             evento_id: Number(eventoId),
             nombre,
             precio: Number(precio),
             cantidad: Number(cantidad),
-          },
-        ]);
+          })
+          .eq("id", editandoId);
 
-      if (error) {
-        alert(error.message);
-        return;
+        if (error) {
+          await showAlert(error.message);
+          return;
+        }
+
+        await showAlert("Ticket actualizado");
+      } else {
+        const { error } = await supabase
+          .from("tickets")
+          .insert([
+            {
+              evento_id: Number(eventoId),
+              nombre,
+              precio: Number(precio),
+              cantidad: Number(cantidad),
+            },
+          ]);
+
+        if (error) {
+          await showAlert(error.message);
+          return;
+        }
+
+        await showAlert("Ticket creado");
       }
 
-      alert("Ticket creado");
+      limpiarFormulario();
+      cargarDatos();
+    } finally {
+      setGuardando(false);
     }
-
-    limpiarFormulario();
     cargarDatos();
   }
 
@@ -119,13 +150,13 @@ export default function TicketsPage() {
       .eq("ticket_id", id);
 
     if ((count || 0) > 0) {
-      alert(
+      await showAlert(
         "No se puede eliminar porque tiene ventas asociadas."
       );
       return;
     }
 
-    const confirmar = confirm(
+    const confirmar = await showConfirm(
       "¿Eliminar este ticket?"
     );
 
@@ -137,7 +168,7 @@ export default function TicketsPage() {
       .eq("id", id);
 
     if (error) {
-      alert(error.message);
+      await showAlert(error.message);
       return;
     }
 
@@ -224,6 +255,18 @@ export default function TicketsPage() {
       : 0;
 
   useEffect(() => {
+    const saved = localStorage.getItem("matchflow_session");
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (user.rol !== "admin") {
+        router.push("/dashboard/ventas");
+        return;
+      }
+    } else {
+      router.push("/dashboard");
+      return;
+    }
+
     cargarDatos();
   }, []);
 
@@ -287,10 +330,10 @@ export default function TicketsPage() {
       </div>
 
       {/* NUEVA ESTRUCTURA EN GRID HORIZONTAL */}
-      <div className="grid lg:grid-cols-3 gap-8 mt-8">
+      <div className="grid lg:grid-cols-3 gap-8 mt-8 items-start">
 
         {/* CONTENEDOR DEL FORMULARIO (OCUPA 1 COLUMNA) */}
-        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6">
+        <div className="bg-[#111827] border border-zinc-800 rounded-2xl p-6 h-fit sticky top-4">
 
           <h2 className="text-2xl font-bold mb-4">
             {editandoId
@@ -352,14 +395,19 @@ export default function TicketsPage() {
 
             <div className="flex gap-3">
 
-              <button
-                onClick={guardarTicket}
-                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold"
-              >
-                {editandoId
-                  ? "Guardar Cambios"
-                  : "Crear Ticket"}
-              </button>
+               <button
+                 onClick={guardarTicket}
+                 disabled={guardando}
+                 className={`bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold cursor-pointer ${
+                   guardando ? "opacity-50 cursor-not-allowed" : ""
+                 }`}
+               >
+                 {guardando
+                   ? "Guardando..."
+                   : editandoId
+                   ? "Guardar Cambios"
+                   : "Crear Ticket"}
+               </button>
 
               {editandoId && (
                 <button
@@ -434,7 +482,7 @@ export default function TicketsPage() {
 
                           <div className="flex items-center gap-2">
                             <CalendarDays size={14} />
-                            {evento.fecha}
+                            {formatearFecha(evento.fecha)}
                           </div>
 
                           <div className="flex items-center gap-2">

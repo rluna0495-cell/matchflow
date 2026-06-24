@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface Aficionado {
@@ -12,6 +13,7 @@ interface Aficionado {
 }
 
 export default function AficionadosPage() {
+  const router = useRouter();
   const [nombre, setNombre] = useState("");
   const [cedula, setCedula] = useState("");
   const [email, setEmail] = useState("");
@@ -25,6 +27,18 @@ export default function AficionadosPage() {
   >([]);
 
   useEffect(() => {
+    const saved = localStorage.getItem("matchflow_session");
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (user.rol !== "admin") {
+        router.push("/dashboard/ventas");
+        return;
+      }
+    } else {
+      router.push("/dashboard");
+      return;
+    }
+
     cargarAficionados();
   }, []);
 

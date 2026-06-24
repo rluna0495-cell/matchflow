@@ -25,6 +25,19 @@ export default function AccesosQRPage() {
   const [autorizados, setAutorizados] = useState(0);
   const [denegados, setDenegados] = useState(0);
 
+  interface UltimoAcceso {
+    id: number;
+    comprador: string;
+    ticketNombre: string;
+    cantidad: number;
+    usado: boolean;
+    hora: string;
+  }
+  const [ultimosAccesos, setUltimosAccesos] = useState<UltimoAcceso[]>([]);
+  const [camaraError, setCamaraError] = useState<string | null>(null);
+
+
+
   async function validarQR(qrCode: string) {
     if (escaneando) return;
 
@@ -131,52 +144,103 @@ export default function AccesosQRPage() {
 
   // PASO 2 — Crear función de estadísticas
   async function cargarEstadisticas() {
-    const { data } = await supabase
+    const { data: ventasData } = await supabase
       .from("ventas")
       .select("*");
 
-    if (!data) return;
+    const { data: ticketsData } = await supabase
+      .from("tickets")
+      .select("*");
 
-    const usados = data.filter(
+    if (!ventasData) return;
+
+    const usados = ventasData.filter(
       (v) => v.usado === true
     ).length;
 
-    const disponibles = data.filter(
+    const disponibles = ventasData.filter(
       (v) => !v.usado
     ).length;
 
     setQrUsados(usados);
     setQrDisponibles(disponibles);
+
+    const accesosValidados = ventasData
+      .filter((v) => v.usado && v.fecha_ingreso)
+      .sort((a, b) => new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime())
+      .slice(0, 10)
+      .map((v) => {
+        const ticket = ticketsData?.find((t) => t.id === v.ticket_id);
+        let horaStr = "—";
+        if (v.fecha_ingreso) {
+          const d = new Date(v.fecha_ingreso);
+          horaStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        return {
+          id: v.id,
+          comprador: v.comprador,
+          ticketNombre: ticket?.nombre || "Zona desconocida",
+          cantidad: v.cantidad,
+          usado: true,
+          hora: horaStr
+        };
+      });
+
+    setUltimosAccesos(accesosValidados);
   }
+
 
   // PASO 3 — Ejecutar estadísticas al cargar
   useEffect(() => {
     cargarEstadisticas();
 
-    const scanner = new Html5Qrcode("reader");
+    let isMounted = true;
+    let scanner: Html5Qrcode | null = null;
 
-    scannerRef.current = scanner;
+    const timer = setTimeout(() => {
+      if (!isMounted) return;
 
-    scanner
-      .start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: 250,
-        },
-        async (decodedText) => {
-          await validarQR(decodedText.trim());
-        },
-        () => {}
-      )
-      .catch(console.error);
+      try {
+        scanner = new Html5Qrcode("reader");
+        scannerRef.current = scanner;
+
+        scanner
+          .start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: 250,
+            },
+            async (decodedText) => {
+              await validarQR(decodedText.trim());
+            },
+            () => {}
+          )
+          .catch((err) => {
+            console.error("Error al iniciar el scanner:", err);
+            if (isMounted) {
+              setCamaraError(
+                "No se pudo acceder a la cámara. Asegúrate de otorgar permisos o conectar un dispositivo de captura."
+              );
+            }
+          });
+      } catch (e) {
+        console.error("Error al instanciar Html5Qrcode:", e);
+      }
+    }, 500);
 
     return () => {
+      isMounted = false;
+      clearTimeout(timer);
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+        const activeScanner = scannerRef.current;
+        if (activeScanner.isScanning) {
+          activeScanner.stop().catch((err) => console.error("Error al detener el scanner:", err));
+        }
       }
     };
   }, []);
+
 
   return (
     // PASO 6 — Eliminar fondo verde y rojo
@@ -247,12 +311,19 @@ export default function AccesosQRPage() {
             Scanner QR
           </h2>
 
-          <div
-            id="reader"
-            className={`max-w-md mx-auto rounded-xl overflow-hidden ${
-              estado !== "esperando" ? "opacity-30" : ""
-            }`}
-          />
+          {camaraError ? (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-center text-sm">
+              <p className="font-semibold">Aviso de Cámara</p>
+              <p className="mt-1 text-zinc-400">{camaraError}</p>
+            </div>
+          ) : (
+            <div
+              id="reader"
+              className={`max-w-md mx-auto rounded-xl overflow-hidden ${
+                estado !== "esperando" ? "opacity-30" : ""
+              }`}
+            />
+          )}
         </div>
 
         {/* COLUMNA DERECHA: RESULTADO DE VALIDACIÓN */}
@@ -371,45 +442,26 @@ export default function AccesosQRPage() {
             </thead>
 
             <tbody>
-
-              <tr className="border-b border-zinc-900">
-
-                <td className="py-4">
-                  Carlos Pérez
-                </td>
-
-                <td className="py-4">
-                  Tribuna Principal
-                </td>
-
-                <td className="py-4">
-                  2
-                </td>
-
-                <td className="py-4">
-
-                  <span
-                    className="
-                    bg-green-500/20
-                    text-green-400
-                    px-3
-                    py-1
-                    rounded-full
-                    text-xs
-                    font-semibold
-                    "
-                  >
-                    Autorizado
-                  </span>
-
-                </td>
-
-                <td className="py-4">
-                  11:35
-                </td>
-
-              </tr>
-
+              {ultimosAccesos.map((acceso) => (
+                <tr key={acceso.id} className="border-b border-zinc-900">
+                  <td className="py-4">{acceso.comprador}</td>
+                  <td className="py-4">{acceso.ticketNombre}</td>
+                  <td className="py-4">{acceso.cantidad}</td>
+                  <td className="py-4">
+                    <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-semibold">
+                      Autorizado
+                    </span>
+                  </td>
+                  <td className="py-4">{acceso.hora}</td>
+                </tr>
+              ))}
+              {ultimosAccesos.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-zinc-500">
+                    No hay accesos validados recientes.
+                  </td>
+                </tr>
+              )}
             </tbody>
 
           </table>

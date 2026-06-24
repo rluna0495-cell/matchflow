@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   DollarSign,
@@ -19,7 +20,25 @@ interface Venta {
   ticket_id: number;
 }
 
+function formatearFecha(fechaStr: string) {
+  if (!fechaStr) return "";
+  try {
+    const d = new Date(fechaStr);
+    if (isNaN(d.getTime())) return fechaStr;
+    return d.toLocaleDateString("es-ES", {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return fechaStr;
+  }
+}
+
 export default function DashboardPage() {
+  const router = useRouter();
   const [eventos, setEventos] = useState(0);
   const [tickets, setTickets] = useState(0);
   const [ventas, setVentas] = useState(0);
@@ -38,6 +57,18 @@ export default function DashboardPage() {
 
   // AUTO-REFRESCO IMPLEMENTADO EN EL EFFECT
   useEffect(() => {
+    const saved = localStorage.getItem("matchflow_session");
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (user.rol !== "admin") {
+        router.push("/dashboard/ventas");
+        return;
+      }
+    } else {
+      router.push("/dashboard");
+      return;
+    }
+
     cargarDashboard();
 
     const interval = setInterval(() => {
@@ -221,7 +252,7 @@ export default function DashboardPage() {
           </h3>
 
           <p className="text-zinc-400 mt-3">
-            {fecha}
+            {formatearFecha(fecha)}
           </p>
 
           <p className="text-zinc-400">

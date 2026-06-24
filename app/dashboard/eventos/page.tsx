@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useModal } from "@/components/modal-provider";
 import {
   CalendarDays,
   Plus,
@@ -19,7 +21,27 @@ interface Evento {
   created_at?: string;
 }
 
+function formatearFecha(fechaStr: string) {
+  if (!fechaStr) return "";
+  try {
+    const d = new Date(fechaStr);
+    if (isNaN(d.getTime())) return fechaStr;
+    return d.toLocaleDateString("es-ES", {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return fechaStr;
+  }
+}
+
+
 export default function EventosPage() {
+  const router = useRouter();
+  const { showAlert, showConfirm } = useModal();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [busqueda, setBusqueda] = useState("");
 
@@ -30,7 +52,21 @@ export default function EventosPage() {
   const [editandoId, setEditandoId] =
     useState<number | null>(null);
 
+  const [guardando, setGuardando] = useState(false);
+
   useEffect(() => {
+    const saved = localStorage.getItem("matchflow_session");
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (user.rol !== "admin") {
+        router.push("/dashboard/ventas");
+        return;
+      }
+    } else {
+      router.push("/dashboard");
+      return;
+    }
+
     cargarEventos();
   }, []);
 
@@ -50,47 +86,54 @@ export default function EventosPage() {
 
   async function guardarEvento() {
     if (!partido || !fecha || !estadio) {
-      alert("Completa todos los campos");
+      await showAlert("Completa todos los campos");
       return;
     }
 
-    if (editandoId) {
-      const { error } = await supabase
-        .from("eventos")
-        .update({
-          partido,
-          fecha,
-          estadio,
-        })
-        .eq("id", editandoId);
+    if (guardando) return;
+    setGuardando(true);
 
-      if (error) {
-        alert(error.message);
-        return;
-      }
-    } else {
-      const { error } = await supabase
-        .from("eventos")
-        .insert([
-          {
+    try {
+      if (editandoId) {
+        const { error } = await supabase
+          .from("eventos")
+          .update({
             partido,
             fecha,
             estadio,
-          },
-        ]);
+          })
+          .eq("id", editandoId);
 
-      if (error) {
-        alert(error.message);
-        return;
+        if (error) {
+          await showAlert(error.message);
+          return;
+        }
+      } else {
+        const { error } = await supabase
+          .from("eventos")
+          .insert([
+            {
+              partido,
+              fecha,
+              estadio,
+            },
+          ]);
+
+        if (error) {
+          await showAlert(error.message);
+          return;
+        }
       }
-    }
 
-    limpiarFormulario();
-    cargarEventos();
+      limpiarFormulario();
+      cargarEventos();
+    } finally {
+      setGuardando(false);
+    }
   }
 
   async function eliminarEvento(id: number) {
-    const confirmar = confirm(
+    const confirmar = await showConfirm(
       "¿Eliminar este evento?"
     );
 
@@ -102,7 +145,7 @@ export default function EventosPage() {
       .eq("id", id);
 
     if (error) {
-      alert(error.message);
+      await showAlert(error.message);
       return;
     }
 
@@ -216,12 +259,12 @@ export default function EventosPage() {
           />
 
           <input
-            type="text"
+            type="datetime-local"
             value={fecha}
             onChange={(e) =>
               setFecha(e.target.value)
             }
-            className="bg-[#0F172A] border border-zinc-700 rounded-xl p-3"
+            className="bg-[#0F172A] border border-zinc-700 rounded-xl p-3 text-zinc-300 outline-none focus:border-blue-500"
           />
 
           <input
@@ -239,9 +282,14 @@ export default function EventosPage() {
 
           <button
             onClick={guardarEvento}
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold"
+            disabled={guardando}
+            className={`bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold cursor-pointer ${
+              guardando ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            {editandoId
+            {guardando
+              ? "Guardando..."
+              : editandoId
               ? "Actualizar Evento"
               : "Crear Evento"}
           </button>
@@ -306,7 +354,7 @@ export default function EventosPage() {
                     <div className="flex items-center gap-2 mt-3 text-zinc-400">
                       <CalendarDays size={16} />
 
-                      {evento.fecha}
+                      {formatearFecha(evento.fecha)}
                     </div>
 
                     <div className="flex items-center gap-2 mt-2 text-zinc-400">

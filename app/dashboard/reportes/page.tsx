@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface Venta {
@@ -31,6 +32,7 @@ interface Aficionado {
 }
 
 export default function ReportesPage() {
+  const router = useRouter();
   const [ventas, setVentas] = useState<ReporteVenta[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
 
@@ -43,6 +45,18 @@ export default function ReportesPage() {
 
   // IMPLEMENTACIÓN DE AUTO-REFRESCO CADA 5 SEGUNDOS
   useEffect(() => {
+    const saved = localStorage.getItem("matchflow_session");
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (user.rol !== "admin") {
+        router.push("/dashboard/ventas");
+        return;
+      }
+    } else {
+      router.push("/dashboard");
+      return;
+    }
+
     cargarReportes();
 
     const interval = setInterval(() => {
