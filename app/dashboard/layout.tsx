@@ -15,6 +15,8 @@ import {
   Settings,
   LogOut,
   Lock,
+  Menu,
+  X,
 } from "lucide-react";
 
 interface UsuarioSesion {
@@ -32,9 +34,10 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Estados de autenticación
+  // Estados de autenticación y UI
   const [sesion, setSesion] = useState<UsuarioSesion | null>(null);
   const [loading, setLoading] = useState(true);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   // Formulario
   const [email, setEmail] = useState("");
@@ -223,13 +226,33 @@ export default function DashboardLayout({
 
   return (
     <div className="h-screen overflow-hidden flex bg-[#09090B] text-white">
+      {/* OVERLAY MÓVIL */}
+      {menuAbierto && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setMenuAbierto(false)}
+        />
+      )}
+
       {/* BARRA LATERAL */}
-      <aside className="w-72 bg-[#111827] border-r border-slate-800 flex flex-col">
-        <div className="p-8 border-b border-slate-800">
-          <h1 className="text-3xl font-black tracking-tight">
-            <span className="text-blue-500">Match</span>Flow
-          </h1>
-          <p className="text-slate-400 text-sm mt-2">Sports Ticketing Platform</p>
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#111827] border-r border-slate-800 flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+          menuAbierto ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="p-8 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight">
+              <span className="text-blue-500">Match</span>Flow
+            </h1>
+            <p className="text-slate-400 text-sm mt-2">Sports Ticketing Platform</p>
+          </div>
+          <button 
+            className="md:hidden text-zinc-400 hover:text-white"
+            onClick={() => setMenuAbierto(false)}
+          >
+            <X size={24} />
+          </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -241,6 +264,7 @@ export default function DashboardLayout({
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={() => setMenuAbierto(false)}
                 className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all duration-200 font-medium hover:translate-x-1 ${
                   active
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
@@ -277,15 +301,24 @@ export default function DashboardLayout({
       </aside>
 
       {/* CONTENIDO PRINCIPAL */}
-      <div className="flex-1 flex flex-col">
-        <header className="h-20 border-b border-slate-800 bg-[#111827] flex items-center justify-between px-8">
-          <div>
-            <h2 className="text-xl font-bold">Centro de Operaciones</h2>
-            <p className="text-slate-400 text-sm">Monitoreo y administración de la plataforma</p>
+      <div className="flex-1 flex flex-col w-full overflow-hidden">
+        <header className="h-20 flex-shrink-0 border-b border-slate-800 bg-[#111827] flex items-center justify-between px-4 md:px-8">
+          <div className="flex items-center gap-4">
+            <button 
+              className="md:hidden text-zinc-400 hover:text-white"
+              onClick={() => setMenuAbierto(true)}
+            >
+              <Menu size={28} />
+            </button>
+            <div>
+              <h2 className="text-xl font-bold hidden sm:block">Centro de Operaciones</h2>
+              <h2 className="text-xl font-bold sm:hidden">MatchFlow</h2>
+              <p className="text-slate-400 text-sm hidden sm:block">Monitoreo y administración de la plataforma</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="bg-slate-900 px-4 py-2 rounded-xl">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="bg-slate-900 px-3 py-1.5 md:px-4 md:py-2 rounded-xl hidden sm:block">
               <span className="text-slate-400 text-sm capitalize">{sesion.rol}</span>
             </div>
 
@@ -298,7 +331,9 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <main className="flex-1 p-8 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden">
+          {children}
+        </main>
       </div>
     </div>
   );
